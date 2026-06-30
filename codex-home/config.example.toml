@@ -1,0 +1,21 @@
+# Isolated CODEX_HOME for the codex-mcp backend (point GM_CODEX_HOME here, or keep
+# it as <pkg>/codex-home). Keep ONLY the foundry MCP server — unrelated servers from
+# your global ~/.codex/config.toml make `codex exec` hang on their init.
+#
+# Also create a symlink so codex can authenticate:
+#   ln -s ~/.codex/auth.json <this-dir>/auth.json
+#
+# Then copy this file to config.toml and fix the two absolute paths below.
+
+model = "gpt-5.5"
+model_reasoning_effort = "low"
+
+# Trust the working directory the bridge launches codex from (default: $HOME) and
+# the package directory, so codex does not block on a trust prompt.
+[projects."/ABSOLUTE/PATH/TO/HOME"]
+trust_level = "trusted"
+
+[mcp_servers.foundry]
+command = "node"
+args = ["/ABSOLUTE/PATH/TO/gm-bridge/src/foundry-mcp.js"]
+default_tools_approval_mode = "auto"
