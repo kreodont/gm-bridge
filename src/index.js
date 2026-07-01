@@ -266,7 +266,7 @@ function directivesBlock(directives) {
 }
 
 // Assemble the request content for the channel: directives + scene + NPC dossier + memories + the request itself.
-async function assemble(prompt, npc, scene, directives) {
+async function assemble(prompt, npc, scene, directives, sceneNotes) {
   const dossier = await matchDossier(npc, prompt);
   const resolvedNpc = dossier?.name || npc || null;
   const recallQuery = [scene, npc, prompt].filter(Boolean).join(" ");
@@ -276,6 +276,10 @@ async function assemble(prompt, npc, scene, directives) {
   const dir = directivesBlock(directives);
   if (dir) parts.push(dir); // first — so the model sees the priority before anything else
   if (scene) parts.push(`Scene/location: ${scene}`);
+  const notes = String(sceneNotes || "").trim();
+  if (notes) {
+    parts.push(`SCENE NOTES (GM-only description of this location — ground the answer in it, do not contradict it, never read it aloud verbatim):\n${notes.slice(0, 4000)}`);
+  }
   if (dossier) {
     parts.push(`DOSSIER — NPC: ${dossier.name}\n${dossier.bio.slice(0, 2000)}\nStay strictly in this NPC's voice, per the dossier.`);
   } else if (npc) {
@@ -319,6 +323,7 @@ const httpServer = http.createServer(async (req, res) => {
       const prompt = (p.prompt || "").trim();
       const npc = (p.npc || "").trim();
       const scene = (p.scene || "").trim();
+      const sceneNotes = (p.sceneNotes || "").trim();
       const directives = (p.directives || "").trim();
       const engine = resolveEngine(p.engine);
       if (!prompt) {
@@ -363,7 +368,7 @@ const httpServer = http.createServer(async (req, res) => {
           return;
         }
 
-        const { content, resolvedNpc } = await assemble(prompt, npc, scene, directives);
+        const { content, resolvedNpc } = await assemble(prompt, npc, scene, directives, sceneNotes);
         let text;
         if (engine === "codex") {
           // Direct codex call; the evening's warm thread holds short-term context.

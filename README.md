@@ -16,7 +16,7 @@ Two LLM backends, switchable per request from the UI:
 Foundry chat  (dialog macro)
       │ fetch
       ▼
-HTTP :8799  POST /assist {prompt, npc?, scene?, engine?, directives?}
+HTTP :8799  POST /assist {prompt, npc?, scene?, sceneNotes?, engine?, directives?}
       │
    gm-bridge
       │  1. matchDossier(npc)  — NPC biographies from Foundry (REST relay)
