@@ -21,6 +21,11 @@ const codexEnv = { ...process.env, CODEX_HOME };
 // tailor it (and you can append a language instruction, e.g. "...; reply in Russian").
 const CAMPAIGN = process.env.GM_CAMPAIGN || "a tabletop RPG campaign (D&D 5e)";
 
+// Hard cap on a single codex call. Without it a stuck codex keeps the GM's
+// "Assistant thinking" spinner up forever; with it the bridge returns a 504
+// and the GM can retry. Generous by default — codex with tools can be slow.
+const CODEX_TIMEOUT = Number(process.env.GM_CODEX_TIMEOUT_MS || 300000);
+
 let client = null;
 let connecting = null;
 
@@ -45,8 +50,9 @@ export async function initCodex(log) {
 export async function askCodex({ prompt, systemPrompt, threadId }) {
   const c = await initCodex();
   let res;
+  const opts = { timeout: CODEX_TIMEOUT };
   if (threadId) {
-    res = await c.callTool({ name: "codex-reply", arguments: { threadId, prompt } });
+    res = await c.callTool({ name: "codex-reply", arguments: { threadId, prompt } }, undefined, opts);
   } else {
     res = await c.callTool({
       name: "codex",
@@ -57,7 +63,7 @@ export async function askCodex({ prompt, systemPrompt, threadId }) {
         "approval-policy": "never",
         config: { model_reasoning_effort: "low" },
       },
-    });
+    }, undefined, opts);
   }
   const sc = res.structuredContent || {};
   let content = sc.content;
@@ -93,10 +99,17 @@ export function codexAction(request, { scene = "", npc = "" } = {}) {
     // blocks reading stdin and hangs (through the bridge — forever).
     const p = spawn("codex", args, { cwd: process.env.HOME, env: codexEnv, stdio: ["ignore", "pipe", "pipe"] });
     let out = "", err = "";
+    const killer = setTimeout(() => {
+      p.kill("SIGKILL");
+      reject(new Error(`codex exec timed out after ${CODEX_TIMEOUT}ms`));
+    }, CODEX_TIMEOUT);
     p.stdout.on("data", (d) => (out += d));
     p.stderr.on("data", (d) => (err += d));
-    p.on("error", reject);
-    p.on("close", () => resolve(extractFinal(out) || "(action performed, but the agent reply could not be parsed)"));
+    p.on("error", (e) => { clearTimeout(killer); reject(e); });
+    p.on("close", () => {
+      clearTimeout(killer);
+      resolve(extractFinal(out) || "(action performed, but the agent reply could not be parsed)");
+    });
   });
 }
 

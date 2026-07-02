@@ -18,7 +18,7 @@ import {
   CallToolRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import http from "node:http";
-import { readFileSync, writeFileSync, unlinkSync, appendFileSync } from "node:fs";
+import { readFileSync, writeFileSync, unlinkSync, appendFileSync, mkdirSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
@@ -61,6 +61,12 @@ const REPLY_TIMEOUT = Number(process.env.GM_REPLY_TIMEOUT_MS || 120000);
 // Lock file is configurable: instances on different backends/ports must not kill each other.
 const LOCK_FILE = process.env.GM_LOCK_FILE || join(homedir(), ".claude", `${SERVER_NAME}.pid`);
 const LOG_FILE = process.env.GM_LOG_FILE || join(homedir(), ".claude", `${SERVER_NAME}.log`);
+
+// The log/lock directory may not exist (e.g. Windows without Claude Code) — create it,
+// otherwise appendFileSync below fails silently and the bridge runs with no log at all.
+for (const f of new Set([dirname(LOG_FILE), dirname(LOCK_FILE)])) {
+  try { mkdirSync(f, { recursive: true }); } catch {}
+}
 
 function log(msg) {
   const line = `[${new Date().toISOString()}] ${SERVER_NAME}: ${msg}\n`;
@@ -337,6 +343,7 @@ const httpServer = http.createServer(async (req, res) => {
         return;
       }
       const reqId = String(++seq);
+      log(`req=${reqId} engine=${engine} npc=${npc || "-"} start: ${prompt.slice(0, 80).replace(/\n/g, " ")}`);
       try {
         // ACTION mode: a request prefixed with /do actually changes the Foundry world.
         // codex-mcp -> codex agent with foundry tools; claude-channel -> the warm

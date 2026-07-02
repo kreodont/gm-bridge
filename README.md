@@ -99,6 +99,7 @@ All configuration is via environment variables (see `.env.example`). Highlights:
 | `GM_SYSTEM_PROMPT` | `./system-prompt.txt` | system prompt file |
 | `GM_MEMORY_DB` | `./data/gm-memory.db` | RAG memory database |
 | `GM_PORT` | `8799` | HTTP port |
+| `GM_CODEX_TIMEOUT_MS` | `300000` | hard cap on a single codex call (MCP and `codex exec`) |
 | `GM_RECALL_HEADER` | English | header of the injected MEMORIES block |
 
 The **live directives** field in the macro is an overlay with the highest priority:
