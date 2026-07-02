@@ -6,6 +6,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { spawn } from "node:child_process";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -97,7 +98,7 @@ export function codexAction(request, { scene = "", npc = "" } = {}) {
     ];
     // stdin closed ('ignore'): otherwise codex exec, seeing an open pipe with no EOF,
     // blocks reading stdin and hangs (through the bridge — forever).
-    const p = spawn("codex", args, { cwd: process.env.HOME, env: codexEnv, stdio: ["ignore", "pipe", "pipe"] });
+    const p = spawn("codex", args, { cwd: homedir(), env: codexEnv, stdio: ["ignore", "pipe", "pipe"] });
     let out = "", err = "";
     const killer = setTimeout(() => {
       p.kill("SIGKILL");
