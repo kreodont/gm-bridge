@@ -76,6 +76,25 @@ GM_BACKEND=codex-mcp npm start
 See `codex-home/config.example.toml` for the isolated `CODEX_HOME` the codex backend
 needs (only the foundry MCP server, plus an `auth.json` symlink).
 
+### Run on Windows
+
+Only the codex backend works natively on Windows (the claude backend needs a warm
+tmux session). Double-click `start-gm-bridge.bat` — it starts the bridge on
+`localhost:8799`; keep the window open while playing. If the bridge dies, the window
+stays open with the error message.
+
+To start it automatically on login, put a shortcut to the bat file into the Startup
+folder: press `Win+R`, type `shell:startup`, Enter — and copy a shortcut to
+`start-gm-bridge.bat` there. (Right-click the bat → Create shortcut → move the
+shortcut into the opened folder.) On next login the bridge comes up by itself in a
+console window.
+
+Logs live in `%USERPROFILE%\.claude\gm-bridge.log`; view the tail with:
+
+```powershell
+Get-Content "$env:USERPROFILE\.claude\gm-bridge.log" -Tail 30
+```
+
 ### Install the Foundry macro
 
 Create a Script macro in your world with the contents of `foundry-gm-macro.js` and
