@@ -89,3 +89,46 @@ export async function matchDossier(npc, prompt) {
   }
   return null;
 }
+
+// --- Script builders for the bestiary tools (shared by index.js and foundry-mcp.js) ---
+
+// Search actors by name in the world and in Actor compendia (the bestiary).
+export function findActorScript(query) {
+  return (
+    `const q = ${JSON.stringify(String(query || ""))}.toLowerCase();` +
+    ` const world = game.actors.filter(a => a.name.toLowerCase().includes(q)).slice(0, 15)` +
+    `.map(a => ({ id: a.id, name: a.name, type: a.type, cr: a.system?.details?.cr ?? null }));` +
+    ` const compendium = [];` +
+    ` for (const pack of game.packs.filter(p => p.documentName === "Actor")) {` +
+    `   const idx = await pack.getIndex();` +
+    `   for (const e of idx) { if ((e.name || "").toLowerCase().includes(q)) compendium.push({ id: e._id, name: e.name, pack: pack.collection }); if (compendium.length >= 15) break; }` +
+    `   if (compendium.length >= 15) break;` +
+    ` }` +
+    ` return { world, compendium };`
+  );
+}
+
+// Place an existing actor (world or compendium) on the current scene as token(s).
+export function addToSceneScript({ name = "", id = "", pack = "", count = 1, x = null, y = null } = {}) {
+  const n = Math.max(1, Math.min(20, Number(count) || 1));
+  return (
+    `let actor = null;` +
+    ` const pk = ${JSON.stringify(String(pack || ""))};` +
+    ` const aid = ${JSON.stringify(String(id || ""))};` +
+    ` const nm = ${JSON.stringify(String(name || ""))};` +
+    ` if (pk) { const p = game.packs.get(pk); if (!p) return { error: "pack not found: " + pk }; actor = await game.actors.importFromCompendium(p, aid); }` +
+    ` else if (aid) actor = game.actors.get(aid);` +
+    ` if (!actor && nm) { const q = nm.toLowerCase(); actor = game.actors.find(a => a.name.toLowerCase() === q) || game.actors.find(a => a.name.toLowerCase().includes(q)); }` +
+    ` if (!actor) return { error: "actor not found — use foundry_find_actor first" };` +
+    ` const scene = canvas?.scene || game.scenes.active;` +
+    ` if (!scene) return { error: "no active scene" };` +
+    ` const d = scene.dimensions, g = scene.grid.size;` +
+    ` const snap = (v) => Math.round(v / g) * g;` +
+    ` const cx = ${x === null ? "snap(d.sceneX + d.sceneWidth / 2)" : JSON.stringify(Number(x))};` +
+    ` const cy = ${y === null ? "snap(d.sceneY + d.sceneHeight / 2)" : JSON.stringify(Number(y))};` +
+    ` const tokens = [];` +
+    ` for (let i = 0; i < ${n}; i++) { const td = await actor.getTokenDocument({ x: cx + (i % 5) * g, y: cy + Math.floor(i / 5) * g }); tokens.push(td.toObject()); }` +
+    ` const created = await scene.createEmbeddedDocuments("Token", tokens);` +
+    ` return { actor: { id: actor.id, name: actor.name }, scene: scene.name, tokens: created.map(t => t.id) };`
+  );
+}

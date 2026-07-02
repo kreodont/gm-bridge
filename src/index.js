@@ -24,7 +24,7 @@ import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { matchDossier, fetchDossiers, relayExec } from "./world.js";
+import { matchDossier, fetchDossiers, relayExec, findActorScript, addToSceneScript } from "./world.js";
 import { recall, remember, formatRecall, warmup } from "./memory.js";
 import { askCodex, initCodex, codexAction } from "./codex-backend.js";
 
@@ -126,6 +126,7 @@ const mcp = new Server(
       "The remember_event tool saves a meaningful scene fact to long-term memory so the NPC recalls it later.",
       "The recall tool fetches past memories for a query when you need to check continuity.",
       "If ACTION MODE arrives, carry it out with the foundry_* tools (foundry_create_npc / foundry_create_journal / foundry_execute_js), then reply with a confirmation.",
+      "When asked to add/spawn a monster or creature, ALWAYS call foundry_find_actor first and reuse an existing world/compendium actor via foundry_add_to_scene; create a new actor only when nothing suitable exists.",
     ].join("\n"),
   }
 );
@@ -206,6 +207,34 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["name", "content"],
       },
     },
+    {
+      name: "foundry_find_actor",
+      description:
+        "Search the bestiary: actors by name in the world and in Actor compendia. Call this FIRST when asked to add a monster/creature — reuse a match instead of creating a duplicate.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Name or part of the name (case-insensitive)" },
+        },
+        required: ["query"],
+      },
+    },
+    {
+      name: "foundry_add_to_scene",
+      description:
+        "Place an existing actor on the current scene as token(s). Pass id (world actor) or id+pack (compendium entry, gets imported) from foundry_find_actor, or just a name. Defaults to the scene center.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Actor name (used when id is not given)" },
+          id: { type: "string", description: "Actor id from foundry_find_actor" },
+          pack: { type: "string", description: "Compendium pack id (when the actor is a compendium entry)" },
+          count: { type: "number", description: "How many tokens (default 1, max 20)" },
+          x: { type: "number", description: "X in pixels (default: scene center)" },
+          y: { type: "number", description: "Y in pixels (default: scene center)" },
+        },
+      },
+    },
   ],
 }));
 
@@ -233,6 +262,15 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
     }
     if (name === "foundry_execute_js") {
       const r = await relayExec(String(args.script || ""));
+      return { content: [{ type: "text", text: JSON.stringify(r) }] };
+    }
+    if (name === "foundry_find_actor") {
+      const r = await relayExec(findActorScript(args.query));
+      return { content: [{ type: "text", text: JSON.stringify(r) }] };
+    }
+    if (name === "foundry_add_to_scene") {
+      const r = await relayExec(addToSceneScript(args), 30000);
+      log(`foundry_add_to_scene: ${args.name || args.id}`);
       return { content: [{ type: "text", text: JSON.stringify(r) }] };
     }
     if (name === "foundry_create_npc") {
@@ -366,7 +404,8 @@ const httpServer = http.createServer(async (req, res) => {
               "ACTION MODE — this is not a line to read aloud, but a command to change the Foundry world.\n" +
               (scene ? `Scene: ${scene}\n` : "") +
               `Task: ${request}\n` +
-              "Do it via the foundry_* tools (foundry_create_npc / foundry_create_journal / foundry_execute_js), then call reply with req_id and a short confirmation (what you did, id).";
+              "Do it via the foundry_* tools (foundry_create_npc / foundry_create_journal / foundry_execute_js), then call reply with req_id and a short confirmation (what you did, id).\n" +
+              "To add a monster/creature: FIRST foundry_find_actor, then foundry_add_to_scene with the match; create a new actor only if nothing suitable exists.";
             text = await new Promise((resolve, reject) => {
               const timer = setTimeout(() => { if (pending.delete(reqId)) reject(new Error("action timeout")); }, REPLY_TIMEOUT);
               pending.set(reqId, { resolve, reject, timer });

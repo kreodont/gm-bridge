@@ -10,7 +10,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { ListToolsRequestSchema, CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { relayExec } from "./world.js";
+import { relayExec, findActorScript, addToSceneScript } from "./world.js";
 
 const log = (m) => process.stderr.write(`[foundry-mcp] ${m}\n`);
 
@@ -20,6 +20,9 @@ const mcp = new Server(
     capabilities: { tools: {} },
     instructions: [
       "Tools to change the Foundry VTT (D&D 5e) world as the GM via the REST relay.",
+      "When asked to add/spawn a monster or creature, ALWAYS call foundry_find_actor first",
+      "and reuse an existing world/compendium actor via foundry_add_to_scene. Create a new",
+      "actor from scratch only when the search finds nothing suitable.",
       "foundry_execute_js — run arbitrary JS in the world: game.actors, game.scenes,",
       "game.journal, Actor.create, Scene.create, JournalEntry.create, etc. Returns result.",
       "To create an NPC use Actor.create({name, type:'npc', system:{...}}).",
@@ -66,6 +69,34 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["name", "content"],
       },
     },
+    {
+      name: "foundry_find_actor",
+      description:
+        "Search the bestiary: actors by name in the world and in Actor compendia. Call this FIRST when asked to add a monster/creature — reuse a match instead of creating a duplicate.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Name or part of the name (case-insensitive)" },
+        },
+        required: ["query"],
+      },
+    },
+    {
+      name: "foundry_add_to_scene",
+      description:
+        "Place an existing actor on the current scene as token(s). Pass id (world actor) or id+pack (compendium entry, gets imported) from foundry_find_actor, or just a name. Defaults to the scene center.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Actor name (used when id is not given)" },
+          id: { type: "string", description: "Actor id from foundry_find_actor" },
+          pack: { type: "string", description: "Compendium pack id (when the actor is a compendium entry)" },
+          count: { type: "number", description: "How many tokens (default 1, max 20)" },
+          x: { type: "number", description: "X in pixels (default: scene center)" },
+          y: { type: "number", description: "Y in pixels (default: scene center)" },
+        },
+      },
+    },
   ],
 }));
 
@@ -89,6 +120,10 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
         ` await j.createEmbeddedDocuments("JournalEntryPage", [{ name: ${JSON.stringify(a.name || "Page")}, text: { content: ${JSON.stringify(a.content || "")}, format: 1 } }]);` +
         ` return { id: j.id, name: j.name };`;
       result = await relayExec(script);
+    } else if (name === "foundry_find_actor") {
+      result = await relayExec(findActorScript(a.query));
+    } else if (name === "foundry_add_to_scene") {
+      result = await relayExec(addToSceneScript(a), 30000);
     } else {
       return { content: [{ type: "text", text: `unknown tool: ${name}` }], isError: true };
     }

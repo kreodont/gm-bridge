@@ -86,6 +86,7 @@ export function codexAction(request, { scene = "", npc = "" } = {}) {
     `You are a game-master's agent assistant for ${CAMPAIGN}. ` +
     "You have foundry_* tools to change the Foundry VTT world. " +
     "Perform the requested action by calling the right tool, then briefly confirm the result (what you did, id). " +
+    "To add a monster/creature to the scene: FIRST search the bestiary with foundry_find_actor and place the match with foundry_add_to_scene; create a new actor only if nothing suitable exists. " +
     "Do nothing beyond what was requested.";
   const ctx = [scene && `Scene: ${scene}`, npc && `NPC: ${npc}`].filter(Boolean).join(". ");
   const prompt = `${sys}\n${ctx ? ctx + "\n" : ""}Task: ${request}`;
