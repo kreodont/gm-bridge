@@ -56,4 +56,4 @@ exec env GM_SERVER_NAME="$SERVER_NAME" "$CLAUDE" \
   --strict-mcp-config \
   --append-system-prompt "$SYS" \
   --model "$MODEL" \
-  --allowedTools "mcp__${SERVER_NAME}__reply" "mcp__${SERVER_NAME}__remember_event" "mcp__${SERVER_NAME}__recall" "mcp__${SERVER_NAME}__foundry_execute_js" "mcp__${SERVER_NAME}__foundry_create_npc" "mcp__${SERVER_NAME}__foundry_create_journal"
+  --allowedTools "mcp__${SERVER_NAME}__reply" "mcp__${SERVER_NAME}__remember_event" "mcp__${SERVER_NAME}__recall" "mcp__${SERVER_NAME}__foundry_execute_js" "mcp__${SERVER_NAME}__foundry_create_npc" "mcp__${SERVER_NAME}__foundry_create_journal" "mcp__${SERVER_NAME}__foundry_find_actor" "mcp__${SERVER_NAME}__foundry_add_to_scene"
