@@ -89,6 +89,11 @@ tmux session). Double-click `start-gm-bridge.bat` — it starts the bridge on
 `localhost:8799`; keep the window open while playing. If the bridge dies, the window
 stays open with the error message.
 
+If the folder is a git clone (and git is installed), the launcher also self-updates
+on every start: `git pull` plus a dependency sync, so restarting the bat is all it
+takes to get the latest version. A ZIP install skips this silently; local edits to
+tracked files also skip the update (with a warning) rather than risk a half-merge.
+
 To start it automatically on login, put a shortcut to the bat file into the Startup
 folder: press `Win+R`, type `shell:startup`, Enter — and copy a shortcut to
 `start-gm-bridge.bat` there. (Right-click the bat → Create shortcut → move the
