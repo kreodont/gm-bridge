@@ -1,11 +1,11 @@
-# Isolated CODEX_HOME for the codex-mcp backend (point GM_CODEX_HOME here, or keep
-# it as <pkg>/codex-home). Keep ONLY the foundry MCP server — unrelated servers from
-# your global ~/.codex/config.toml make `codex exec` hang on their init.
+# ANNOTATED REFERENCE ONLY — you don't need to copy this by hand anymore: the bridge
+# generates config.toml (with correct absolute paths) and copies auth.json from your
+# global ~/.codex/ on first start. Edit the generated config.toml if you want custom
+# settings; delete it to regenerate.
 #
-# Also create a symlink so codex can authenticate:
-#   ln -s ~/.codex/auth.json <this-dir>/auth.json
-#
-# Then copy this file to config.toml and fix the two absolute paths below.
+# Design notes: the CODEX_HOME is isolated on purpose — keep ONLY the foundry MCP
+# server here, unrelated servers from the global ~/.codex/config.toml make
+# `codex exec` hang on their init (observed ~4 min vs ~9s).
 
 model = "gpt-5.5"
 model_reasoning_effort = "low"

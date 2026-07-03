@@ -73,8 +73,14 @@ To run the **codex backend** standalone instead (no warm claude session):
 GM_BACKEND=codex-mcp npm start
 ```
 
-See `codex-home/config.example.toml` for the isolated `CODEX_HOME` the codex backend
-needs (only the foundry MCP server, plus an `auth.json` symlink).
+The isolated `CODEX_HOME` the codex backend needs (`codex-home/` by default, override
+with `GM_CODEX_HOME`) is set up automatically on first start: the bridge generates
+`config.toml` (only the foundry MCP server — global servers from `~/.codex/config.toml`
+would hang codex on init) and copies `auth.json` from your global `~/.codex/`. Both
+files are yours after that: edit freely, they are never overwritten; delete
+`config.toml` to regenerate it with fresh paths. `config.example.toml` stays as an
+annotated reference. The one prerequisite: log in to codex once (`codex login`) so
+`~/.codex/auth.json` exists, and have `node` on PATH.
 
 ### Run on Windows
 
